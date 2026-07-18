@@ -691,7 +691,7 @@ function renderPlain() {
   const rec = defaultPlan(); // the recommended full itinerary, all three, both legs
   const byId = (id) => getExp(id);
   let h = `<div class="plain-inner">
-    <button id="plain-back" class="plain-back">← back</button>
+    <div class="plain-topbar"><button id="plain-back" class="plain-back">← back</button></div>
     <h1>Alaska — the plan</h1>
     <p class="plain-sub">${TRIP.dates} · Femi, Cynthia & Jing</p>
     <h2>Itinerary</h2>`;
