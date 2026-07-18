@@ -309,3 +309,79 @@ export const CONTACTS = [
   { name: 'Chugach Outdoor Center', role: 'Six Mile rafting', phone: '907-277-7238', url: 'https://chugachoutdoorcenter.com' },
   { name: 'Alyeska Nordic Spa', role: 'Girdwood spa', phone: '907-754-2237', url: 'https://anordicspa.com' },
 ];
+
+// ---- Rich detail for the detail sheet (stats, full write-up, highlights, good-to-know) ----
+export const DETAILS = {
+  'goat-trail': {
+    stats: [['Distance', '~22–26 mi'], ['Duration', '5–6 days'], ['Terrain', '~95% off-trail'], ['Pace', '~4–6 mi/day'], ['Skill', 'Route-finding, non-technical']],
+    long: "Wrangell–St. Elias is the largest national park in the US, and the Goat Trail is its classic route-finding traverse. A bush plane drops you at Skolai Pass and you navigate an ancient, trail-less world — braided glacial creeks, tundra benches, and an old miners' route across the face of Chitistone Gorge. Expect real navigation (dead-ends and backtracks are part of it), unbridged creek fords, and a fossil-studded seabed plateau, all beneath Mt. Bona, University Peak, and the Russell Glacier. No ropes, no crevasses — just you, a map, and some of the wildest country in North America.",
+    highlights: ['The airy "Goat Trail" scree ledge above Chitistone Gorge', 'Chitistone Falls & the Hole-in-the-Wall cirque', 'University Peak + Russell Glacier panoramas', 'Nautilus fossils on the Wolverine seabed plateau', 'Bush-plane fly-in to Skolai, pickup at Wolverine'],
+    know: ['~4–6 mi/day — low mileage, high scenery', 'Unbridged glacial creeks — ford early morning when levels are lowest', 'Grizzly country — bear canister + spray required', 'No permit needed; canisters loaned free at the Kennicott visitor center', 'Getting there: Anchorage → Chitina (5 hr paved) → McCarthy → fly-in'],
+  },
+  'nizina-packraft': {
+    stats: [['Duration', '2–4 days'], ['Water', 'Class II–III'], ['Style', 'Fly-in, float-out'], ['Flights', '~$298/pp']],
+    long: "The packraft dream. A short bush flight drops you near the Nizina Glacier, where you paddle a lake dotted with icebergs before dropping into the Nizina River — a big, braided, glacier-fed torrent that carves beneath the 5,000-foot Mile High Cliffs. It's fly-in, float-out with no return flight needed: the river carries you back toward McCarthy.",
+    highlights: ['Paddle an iceberg-strewn glacial lake', 'Class II–III big-volume glacial river', 'The towering 5,000-ft Mile High Cliffs', 'No fly-out needed — float back toward town'],
+    know: ['Cold, silty, fast water — solid packraft comfort needed', 'You bring your own packrafts + PFDs', 'Cheapest wilderness option (~$298/pp of flights)', '$100 packraft loading fee on the bush flight'],
+  },
+  'nabesna-loop': {
+    stats: [['Distance', '~24 mi'], ['Duration', '4–5 days'], ['Access', 'Drive-in (no plane)'], ['Terrain', 'ORV track + off-trail pass']],
+    long: "The budget way to get the primitive Wrangell experience. Drive to the remote Nabesna Road side of the park and disappear into the Trail Creek–Lost Creek loop: an old ORV track that gives way to open tundra, a pass crossing, and countless creek fords. Tons of real route-finding, no bush plane required — you trade the Goat Trail's glacier amphitheater for solitude and savings.",
+    highlights: ['Remote creek valleys + open pass country', 'Endless route-finding and stream crossings', 'No fly-in — saves ~$700–1,200/pp', "True solitude on the park's quiet side"],
+    know: ['~200-mi drive from Anchorage (partly gravel)', 'Wetter, brushier travel than the alpine Goat Trail', 'No permit; bear canister recommended'],
+  },
+  'kenai-fjords': {
+    stats: [['Duration', '6 hr'], ['From', 'Seward · 2.5 hr'], ['Operator', 'Major Marine'], ['Wildlife', '~80% whale rate']],
+    long: "The best day on the water in Southcentral Alaska. A boat carries you out of Seward into Aialik Bay, where a tidewater glacier calves into the sea with a crack like thunder. Along the way: humpbacks and orcas (seen on ~80% of August trips), sea lions hauled out on the rocks, sea otters, puffins, and porpoises. Heated cabin, lunch aboard, and jaw-dropping coastal mountains the whole way.",
+    highlights: ['A tidewater glacier calving into the sea', 'Humpbacks & orcas (~80% sighting rate)', 'Sea lions, otters, puffins, porpoises', 'Lunch + heated cabin aboard'],
+    know: ['~2.5 hr drive from Anchorage to Seward', 'Take seasickness meds — one exposed open-water stretch', 'Pick this OR the 26 Glacier cruise, not both'],
+  },
+  'glacier-26': {
+    stats: [['Duration', '~5 hr'], ['From', 'Whittier · 1.25 hr'], ['Operator', 'Phillips'], ['Route', 'College Fjord']],
+    long: "A glacier lover's dream, only 1.25 hours from Anchorage. The Phillips 26 Glacier cruise runs a 120-mile loop through College Fjord and Prince William Sound, gliding past dozens of glaciers on calm, protected water — far smoother than the open ocean. Seals, otters, and seabirds along the way, plus a hot meal aboard.",
+    highlights: ['~26 glaciers in a single day', 'Calm, protected water (easier on the stomach)', "College Fjord's wall of tidewater ice", 'Only 1.25 hr from Anchorage'],
+    know: ['Mind the one-lane Whittier tunnel schedule', 'Calmer + more glaciers than Seward; fewer whales', 'Pick this OR Kenai Fjords, not both'],
+  },
+  'coho-fishing': {
+    stats: [['Duration', 'Half day'], ['From', 'Soldotna · 3 hr'], ['Target', 'Silver (coho) salmon'], ['Season', 'Late Aug = prime']],
+    long: "Late August is peak silver-salmon season on the Kenai Peninsula. Hop a guided boat with a local who knows the runs and haul chrome-bright coho out of one of the most famous salmon rivers on earth. Gear's provided; you bring the arms. Come home with dinner — and the fish stories.",
+    highlights: ['Prime coho run (Aug 18–26 window)', 'Guided — the pros put you on fish', 'Keep your catch for dinner', 'Legendary Kenai/Kasilof waters'],
+    know: ['Sleep in Soldotna the night before — no pre-dawn 3-hr drive', 'Non-resident fishing license $15–45 (not included)', 'Gear + filleting usually included'],
+  },
+  'six-mile-rafting': {
+    stats: [['Duration', '3–4 hr'], ['From', 'Hope · 1.5 hr'], ['Water', 'Class IV–V'], ['Requirement', 'Swim test']],
+    long: "For the adrenaline crew. Six Mile Creek is one of the most thrilling whitewater runs in Alaska — three tight canyons of cold, powerful Class IV–V water. You'll pass a swim test, suit up, and hold on. Not a lazy float; a genuine rush. (If the group wants something milder, the Matanuska Lion's Head run is a big-fun Class III–IV alternative.)",
+    highlights: ['Three canyons of Class IV–V whitewater', 'One of the best runs in the state', 'Big adrenaline, pro guides', 'Milder Matanuska option if preferred'],
+    know: ['Must be fit and able to pass a cold-water swim test', 'Only if everyone is up for real whitewater', '~1.5 hr from Anchorage near Hope'],
+  },
+  'spencer-float': {
+    stats: [['Duration', 'Full day'], ['Access', 'Train from ANC/Girdwood'], ['Water', 'Gentle float'], ['Ages', '5+']],
+    long: "Effortless magic. Board the Alaska Railroad's Glacier Discovery train to a whistle-stop with no road access, then climb into a guided raft and drift a calm river through a fleet of icebergs calved off Spencer Glacier. Scenic rail, a short walk, and a mellow float — a standout glacier day with zero driving and zero stress.",
+    highlights: ['Ride the rails to a road-less whistle-stop', 'Float past icebergs below Spencer Glacier', 'Gentle and guided — great for everyone', 'No driving all day'],
+    know: ['Full-day trip from Anchorage/Girdwood', 'Books through the Alaska Railroad', 'Perfect solo option for Jing too'],
+  },
+  'kayak-resbay': {
+    stats: [['Duration', '~4 hr'], ['From', 'Seward'], ['Level', 'Beginner-friendly'], ['Best', 'Morning (calm)']],
+    long: "Paddle glassy morning water in a postcard bay ringed by mountains. Sunny Cove's guided Resurrection Bay tour glides past seabird rookeries, hauled-out seals, and waterfalls — no experience needed, just a willingness to get on the water. Morning departures are calmest.",
+    highlights: ['Protected, beginner-friendly paddling', 'Seals, seabirds, and waterfalls', 'Mountain-ringed Resurrection Bay', 'Calm morning water'],
+    know: ['~4 hours, fully guided', 'Cold water — dress warm, go guided', 'Morning = glassiest conditions'],
+  },
+  'alyeska-spa': {
+    stats: [['Duration', 'Half day'], ['From', 'Girdwood · 1 hr'], ['Vibe', 'Hydrotherapy'], ['Ages', '18+']],
+    long: "The perfect finale. There are no natural hot springs near Anchorage (Chena is 7 hours away), so the Alyeska Nordic Spa is the soak: a circuit of hot pools, cold plunges, saunas, and steam with mountain views, tucked at the base of Girdwood's peaks. Melt the trip's aches away before the flight home.",
+    highlights: ['Hot pools, cold plunges, saunas, steam', 'Mountain-base setting in Girdwood', 'On the way back toward the airport', 'The ideal recovery day'],
+    know: ['~1 hr from Anchorage', 'Adults only (18+)', 'Weekends sell out — plan around it'],
+  },
+  'matanuska-walk': {
+    stats: [['Duration', 'Half day'], ['From', 'Glacier View · 2 hr'], ['Activity', 'Guided ice walk']],
+    long: "Strap on spikes and walk out onto a living glacier. The Matanuska is Alaska's most accessible big glacier, and a guided trek takes you onto blue ice past crevasses and meltwater rivers — a surreal, up-close encounter with a river of ice.",
+    highlights: ['Walk on blue glacier ice', 'Crevasses + meltwater channels underfoot', 'Guided, with all the gear', "Alaska's most accessible big glacier"],
+    know: ['~2 hr drive northeast of Anchorage', 'Go guided — do not free-solo glacier ice', 'Great add if you skip a Kenai day'],
+  },
+  'to-mccarthy': {
+    stats: [['Drive', 'ANC → Chitina · 5 hr paved'], ['Then', 'Shuttle or 30-min flight'], ['Cost', '~$129/pp']],
+    long: "Getting to the edge of the wild. Drive the paved highway to Chitina, then hop the Kennicott Shuttle (or a scenic 30-minute bush flight) across the roughest stretch into McCarthy — a tiny, end-of-the-road historic town beside the glaciers. Rental cars aren't allowed on the McCarthy Road gravel, so the shuttle/flight is the move.",
+    highlights: ['Gorgeous paved drive to Chitina', 'Optional 30-min flightseeing hop', 'Historic McCarthy + Kennecott mill town'],
+    know: ['Major rental cars are banned on the McCarthy Road gravel', 'Shuttle ~$99–129 RT, or fly ~$220 one-way', 'Base for the Goat Trail fly-in'],
+  },
+};

@@ -1,6 +1,6 @@
 import {
   TRIP, PEOPLE, DAYS, EXPERIENCES, VARIANT_GROUPS, EXTRA_ACTIVITIES,
-  LODGING, CONTACTS, MAP_CATEGORIES, MAP_POINTS, FIXED_COSTS, dayLabel,
+  LODGING, CONTACTS, MAP_CATEGORIES, MAP_POINTS, FIXED_COSTS, dayLabel, DETAILS,
 } from './data.js';
 import { computeShare } from './cost.js';
 import { initMap, refreshMap, flyToPoint } from './map.js';
@@ -521,6 +521,25 @@ function costPill(e) {
   return `<span class="s-cost">💰 ${money(share)}${note}</span>`;
 }
 
+function detailsHTML(e) {
+  const d = DETAILS[e.id];
+  // Stat chips: use rich stats if present, else derive from the experience's own fields.
+  let stats = (d && d.stats) || [];
+  if (!stats.length) {
+    if (e.where) stats.push(['Where', e.where]);
+    if (e.duration) stats.push(['Duration', e.duration]);
+  }
+  let html = '';
+  if (stats.length) {
+    html += '<div class="d-stats">' + stats.map(([k, v]) =>
+      `<div class="d-stat"><span class="d-k">${k}</span><span class="d-v">${v}</span></div>`).join('') + '</div>';
+  }
+  if (d && d.long) html += `<p class="d-long">${d.long}</p>`;
+  if (d && d.highlights) html += `<div class="d-sec"><div class="d-h">✦ Highlights</div><ul class="d-list hl">${d.highlights.map((x) => `<li>${x}</li>`).join('')}</ul></div>`;
+  if (d && d.know) html += `<div class="d-sec"><div class="d-h">Good to know</div><ul class="d-list">${d.know.map((x) => `<li>${x}</li>`).join('')}</ul></div>`;
+  return html;
+}
+
 function openDetail(id) {
   const e = getExp(id);
   const hero = `<img class="sheet-hero" src="img/${e.id}.jpg" alt="${e.name}" onerror="this.style.display='none'">`;
@@ -538,6 +557,7 @@ function openDetail(id) {
      <div class="s-meta">${[e.where, e.duration].filter(Boolean).join(' · ')}</div>
      <div>${costPill(e)}</div>
      <p class="s-blurb">${e.blurb || ''}</p>
+     ${detailsHTML(e)}
      ${link}
      <div class="sheet-actions">${actions}</div>`);
   s.querySelector('[data-x]')?.addEventListener('click', (ev) => {

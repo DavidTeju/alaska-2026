@@ -226,6 +226,18 @@ a { color: var(--accent-ink); }
 .sheet h3 { margin: 0 0 2px; font-size: 21px; }
 .sheet .s-meta { color: var(--muted); font-size: 14px; margin-bottom: 12px; }
 .sheet .s-blurb { font-size: 15px; margin-bottom: 16px; }
+.d-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 14px 0 16px; }
+.d-stat { background: var(--surface-2); border-radius: 10px; padding: 8px 12px; }
+.d-stat .d-k { display: block; font-size: 11px; text-transform: uppercase; letter-spacing: .5px; color: var(--muted); }
+.d-stat .d-v { display: block; font-size: 14px; font-weight: 700; margin-top: 1px; }
+.d-long { font-size: 14.5px; line-height: 1.55; color: #2a3742; margin: 0 0 16px; }
+.d-sec { margin-bottom: 14px; }
+.d-sec .d-h { font-size: 13px; font-weight: 800; text-transform: uppercase; letter-spacing: .5px; color: var(--accent-ink); margin-bottom: 6px; }
+.d-list { margin: 0; padding-left: 18px; }
+.d-list li { font-size: 14px; margin: 4px 0; line-height: 1.4; }
+.d-list.hl { list-style: none; padding-left: 0; }
+.d-list.hl li { position: relative; padding-left: 20px; }
+.d-list.hl li::before { content: '✦'; position: absolute; left: 0; color: var(--accent); }
 .sheet .s-cost { display: inline-flex; align-items: center; gap: 6px; background: var(--accent-soft); color: var(--accent-ink); font-weight: 700; padding: 7px 14px; border-radius: 999px; font-size: 15px; }
 .sheet .s-cost.free { background: var(--surface-2); color: var(--muted); }
 .sheet-actions { display: flex; gap: 10px; margin-top: 18px; flex-wrap: wrap; }
