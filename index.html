@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Alaska · Aug 12–26, 2026</title>
+<meta name="theme-color" content="#f7f8fa" />
+<link rel="preconnect" href="https://unpkg.com" />
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+<!-- Landing / person picker -->
+<div id="landing" class="landing">
+  <div class="landing-inner">
+    <div class="landing-badge">🏔️</div>
+    <h1>Alaska</h1>
+    <p class="landing-sub">Aug 12 – 26, 2026</p>
+    <p class="landing-q">Who are you?</p>
+    <div id="landing-people" class="landing-people"></div>
+    <p class="landing-foot">Pick yourself to see your days, your plan, and your share.</p>
+  </div>
+</div>
+
+<!-- Main app -->
+<div id="app" class="app hidden">
+  <header class="topbar">
+    <div class="topbar-row">
+      <button id="brand" class="brand" title="Switch person">🏔️ <span>Alaska</span></button>
+      <div id="person-seg" class="seg" role="tablist" aria-label="Who are you"></div>
+    </div>
+    <button id="total-bar" class="total-bar" aria-expanded="false">
+      <span class="total-label">💰 Your share</span>
+      <span class="total-amt" id="total-amt">$0</span>
+      <span class="total-caret">⌄</span>
+    </button>
+    <div id="breakdown" class="breakdown hidden"></div>
+    <nav class="tabs" id="tabs">
+      <button class="tab active" data-view="trip">🗓 <span>Trip</span></button>
+      <button class="tab" data-view="map">🗺 <span>Map</span></button>
+      <button class="tab" data-view="stay">🛏 <span>Stay</span></button>
+      <button class="tab" data-view="info">☎ <span>Info</span></button>
+      <button class="tab" data-view="plan">📄 <span>Plan</span></button>
+    </nav>
+  </header>
+
+  <main class="views">
+    <section id="view-trip" class="view active"></section>
+    <section id="view-map" class="view">
+      <div id="map"></div>
+      <div id="map-list" class="map-list"></div>
+    </section>
+    <section id="view-stay" class="view"></section>
+    <section id="view-info" class="view"></section>
+    <section id="view-plan" class="view"></section>
+  </main>
+
+  <div class="fab-row">
+    <button id="reset-plan" class="fab ghost" title="Reset to the recommended plan">↺ Reset</button>
+    <button id="share-plan" class="fab" title="Copy a link to your version">🔗 Share my plan</button>
+  </div>
+</div>
+
+<!-- Bottom sheet (detail / swap / add) -->
+<div id="sheet-scrim" class="scrim hidden"></div>
+<div id="sheet" class="sheet hidden" role="dialog" aria-modal="true"></div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script type="module" src="app.js"></script>
+</body>
+</html>
