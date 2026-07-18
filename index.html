@@ -19,16 +19,21 @@
     <p class="landing-sub">Aug 12 – 26, 2026</p>
     <p class="landing-q">Who are you?</p>
     <div id="landing-people" class="landing-people"></div>
-    <p class="landing-foot">Pick yourself to see your days, your plan, and your share.</p>
+    <p class="landing-foot">Pick yourself to build your own plan. Everyone syncs — you can see the others' latest anytime.</p>
+    <button id="plain-landing" class="plain-landing">😤 Fuck you Femi, I hate technology<br><span>just show me the plan, plainly</span></button>
   </div>
 </div>
+
+<!-- Plain view overlay -->
+<div id="plain" class="plain hidden"></div>
 
 <!-- Main app -->
 <div id="app" class="app hidden">
   <header class="topbar">
     <div class="topbar-row">
       <button id="brand" class="brand" title="Switch person">🏔️ <span>Alaska</span></button>
-      <div id="person-seg" class="seg" role="tablist" aria-label="Who are you"></div>
+      <div id="person-seg" class="seg" role="tablist" aria-label="Whose plan"></div>
+      <span id="sync-badge" class="sync-badge">⟳ synced</span>
     </div>
     <button id="total-bar" class="total-bar" aria-expanded="false">
       <span class="total-label">💰 Your share</span>
@@ -57,8 +62,9 @@
   </main>
 
   <div class="fab-row">
+    <button id="plain-btn" class="fab ghost" title="Plain text view">📄 Plain</button>
     <button id="reset-plan" class="fab ghost" title="Reset to the recommended plan">↺ Reset</button>
-    <button id="share-plan" class="fab" title="Copy a link to your version">🔗 Share my plan</button>
+    <button id="share-plan" class="fab" title="Copy the app link">🔗 Share app</button>
   </div>
 </div>
 

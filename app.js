@@ -4,11 +4,13 @@ import {
 } from './data.js';
 import { computeShare } from './cost.js';
 import { initMap, refreshMap, flyToPoint } from './map.js';
+import { fetchPlans, putPlan } from './sync.js';
 
-const PLAN_KEY = 'alaska-plan-v1';
-const PERSON_KEY = 'alaska-person-v1';
+const PLANS_KEY = 'alaska-plans-v1';
+const ME_KEY = 'alaska-me-v1';
 
-let state = { person: null, plan: null, view: 'trip' };
+// me = your identity (the plan you edit). person = whose plan you're currently viewing.
+let state = { me: null, person: null, view: 'trip', plans: {}, updatedAt: {}, hadLocalMine: false };
 
 // ---------- helpers ----------
 const $ = (sel, root = document) => root.querySelector(sel);
@@ -24,6 +26,11 @@ const allCostables = () => allExps().concat(FIXED_COSTS);
 const person = () => PEOPLE.find((p) => p.id === state.person);
 const money = (n) => '$' + Math.round(n).toLocaleString();
 const dayObj = (date) => DAYS.find((d) => d.date === date);
+
+// The plan currently being viewed, and whether the viewer may edit it.
+const curPlan = () => state.plans[state.person];
+const isEditable = () => state.person === state.me;
+function ensurePlan(pid) { if (!state.plans[pid]) state.plans[pid] = defaultPlan(); }
 
 // Which trip leg(s) an experience can be scheduled in.
 function legsFor(e) {
@@ -60,15 +67,15 @@ function defaultPlan() {
   return { items, variants };
 }
 
-function loadPlan() {
+function loadLocal() {
   try {
-    const raw = localStorage.getItem(PLAN_KEY);
-    if (raw) return validatePlan(JSON.parse(raw)) || defaultPlan();
+    const raw = localStorage.getItem(PLANS_KEY);
+    if (raw) return JSON.parse(raw) || {};
   } catch (_) {}
-  return defaultPlan();
+  return {};
 }
-function savePlan() {
-  try { localStorage.setItem(PLAN_KEY, JSON.stringify(state.plan)); } catch (_) {}
+function saveLocal() {
+  try { localStorage.setItem(PLANS_KEY, JSON.stringify({ plans: state.plans, updatedAt: state.updatedAt })); } catch (_) {}
 }
 
 // Keep only known experiences on valid days; ensure variant selections resolve.
@@ -83,32 +90,79 @@ function validatePlan(p) {
   return { items, variants };
 }
 
-// If a share link is present, offer to import it (never silently overwrite).
-function maybeImportFromHash() {
-  if (location.hash.length <= 3) return;
-  try {
-    const decoded = JSON.parse(decodeURIComponent(escape(atob(location.hash.slice(1)))));
-    const clean = validatePlan(decoded.plan);
-    if (clean && confirm('Open the shared plan someone sent you? This replaces your current plan on this device.')) {
-      state.plan = clean;
-      savePlan();
-    }
-  } catch (_) { /* ignore bad hash */ }
-  history.replaceState(null, '', location.pathname); // clear hash either way
+const activeIds = () => curPlan().items.map((i) => i.id);
+
+// ---------- sync ----------
+let pushTimer = null;
+function pushMyPlan() {
+  saveLocal();
+  clearTimeout(pushTimer);
+  pushTimer = setTimeout(() => {
+    putPlan(state.me, state.plans[state.me])
+      .then((r) => { if (r && r.updatedAt) { state.updatedAt[state.me] = r.updatedAt; saveLocal(); } })
+      .catch(() => {}); // offline — local cache still holds it, retried on next edit
+  }, 600);
 }
 
-const activeIds = () => state.plan.items.map((i) => i.id);
+function applyServer(data, initial) {
+  if (!data || !data.plans) return false;
+  let changed = false;
+  PEOPLE.forEach((p) => {
+    const sp = data.plans[p.id];
+    if (p.id === state.me) {
+      // Adopt my server plan only on a fresh device (no local plan yet).
+      if (initial && !state.hadLocalMine && sp) { state.plans[p.id] = validatePlan(sp) || defaultPlan(); changed = true; }
+    } else if (sp) {
+      state.plans[p.id] = validatePlan(sp) || defaultPlan();
+      changed = true;
+    }
+    if (data.updatedAt && data.updatedAt[p.id]) state.updatedAt[p.id] = data.updatedAt[p.id];
+  });
+  return changed;
+}
+
+async function syncNow(initial) {
+  try {
+    const data = await fetchPlans();
+    const changed = applyServer(data, initial);
+    saveLocal();
+    if (initial && state.hadLocalMine) pushMyPlan(); // publish my local plan to the server
+    if (changed && state.person) renderActiveView();
+    updateSyncBadge();
+  } catch (_) { updateSyncBadge(true); }
+}
+
+function startSync() {
+  syncNow(true);
+  setInterval(() => syncNow(false), 12000);
+  window.addEventListener('focus', () => syncNow(false));
+}
+
+function timeAgo(ts) {
+  if (!ts) return '';
+  const s = Math.floor((Date.now() - ts) / 1000);
+  if (s < 60) return 'just now';
+  if (s < 3600) return Math.floor(s / 60) + 'm ago';
+  if (s < 86400) return Math.floor(s / 3600) + 'h ago';
+  return Math.floor(s / 86400) + 'd ago';
+}
 
 // ---------- boot ----------
 function boot() {
-  state.plan = loadPlan();
-  maybeImportFromHash();
-  const savedPerson = localStorage.getItem(PERSON_KEY);
+  const local = loadLocal();
+  state.updatedAt = local.updatedAt || {};
+  state.hadLocalMine = false;
+  PEOPLE.forEach((p) => {
+    const v = local.plans && validatePlan(local.plans[p.id]);
+    state.plans[p.id] = v || defaultPlan();
+  });
+  state.me = localStorage.getItem(ME_KEY);
+  if (state.me && local.plans && local.plans[state.me]) state.hadLocalMine = true;
   buildLanding();
   buildPersonSeg();
   wireChrome();
-  if (savedPerson && PEOPLE.some((p) => p.id === savedPerson)) {
-    enterApp(savedPerson);
+  if (state.me && PEOPLE.some((p) => p.id === state.me)) {
+    enterApp(state.me);
   }
 }
 
@@ -123,15 +177,18 @@ function buildLanding() {
     b.onclick = () => enterApp(p.id);
     wrap.appendChild(b);
   });
+  $('#plain-landing').onclick = openPlain;
 }
 
 function enterApp(personId) {
-  state.person = personId;
-  localStorage.setItem(PERSON_KEY, personId);
+  state.me = personId;
+  state.person = personId; // start by viewing your own plan
+  localStorage.setItem(ME_KEY, personId);
   $('#landing').classList.add('hidden');
   $('#app').classList.remove('hidden');
   syncPersonSeg();
   renderAll();
+  startSync();
 }
 
 function buildPersonSeg() {
@@ -140,7 +197,12 @@ function buildPersonSeg() {
   PEOPLE.forEach((p) => {
     const b = el('button', '', `${p.emoji}<span>${p.name}</span>`);
     b.dataset.person = p.id;
-    b.onclick = () => { state.person = p.id; localStorage.setItem(PERSON_KEY, p.id); syncPersonSeg(); renderAll(); };
+    b.onclick = () => {
+      state.person = p.id;
+      syncPersonSeg();
+      renderAll();
+      if (p.id !== state.me) syncNow(false); // fetch freshest when peeking at someone else
+    };
     seg.appendChild(b);
   });
 }
@@ -156,13 +218,17 @@ function wireChrome() {
   });
   $('#total-bar').onclick = toggleBreakdown;
   $('#reset-plan').onclick = () => {
-    if (!confirm('Reset to the recommended plan? This clears everyone’s edits on this device.')) return;
-    state.plan = defaultPlan(); savePlan(); renderAll();
+    if (!isEditable()) { alert(`You can only edit your own plan. Switch to ${meName()} to make changes.`); return; }
+    if (!confirm('Reset your plan to the recommended itinerary?')) return;
+    state.plans[state.me] = defaultPlan(); pushMyPlan(); renderAll();
   };
   $('#share-plan').onclick = sharePlan;
   $('#sheet-scrim').onclick = closeSheet;
-  document.addEventListener('keydown', (ev) => { if (ev.key === 'Escape') closeSheet(); });
+  $('#plain-btn').onclick = openPlain;
+  document.addEventListener('keydown', (ev) => { if (ev.key === 'Escape') { closeSheet(); closePlain(); } });
 }
+
+const meName = () => (PEOPLE.find((p) => p.id === state.me) || {}).name || 'yourself';
 
 // ---------- views ----------
 function switchView(view) {
@@ -174,6 +240,23 @@ function switchView(view) {
   if (view === 'stay') renderStay();
   if (view === 'info') renderInfo();
   if (view === 'plan') renderPlan();
+}
+
+// Re-render whatever view is active (used after a background sync updates data).
+function renderActiveView() {
+  renderTotal();
+  if (state.view === 'trip') renderBoard();
+  else if (state.view === 'stay') renderStay();
+  else if (state.view === 'info') renderInfo();
+  else if (state.view === 'plan') renderPlan();
+}
+
+function updateSyncBadge(offline) {
+  const b = $('#sync-badge');
+  if (!b) return;
+  if (offline) { b.textContent = '⚠︎ offline'; b.className = 'sync-badge off'; return; }
+  b.textContent = '⟳ synced';
+  b.className = 'sync-badge';
 }
 
 function renderAll() {
@@ -230,7 +313,7 @@ function toggleBreakdown() {
 
 // ---------- board ----------
 function activeRouteSpan() {
-  const item = state.plan.items.find((i) => { const e = getExp(i.id); return e && e.spanDays; });
+  const item = curPlan().items.find((i) => { const e = getExp(i.id); return e && e.spanDays; });
   if (!item) return null;
   const e = getExp(item.id);
   const wild = DAYS.filter((d) => d.leg === 'wilderness').map((d) => d.date);
@@ -243,15 +326,21 @@ function activeRouteSpan() {
 function renderBoard() {
   const root = $('#view-trip');
   root.innerHTML = '';
+  const editable = isEditable();
 
-  // Shared-plan context so edits/costs aren't mistaken for private
-  root.appendChild(el('div', 'sharednote',
-    `👥 Shared trip plan · viewing as <strong>${person().emoji} ${person().name}</strong>. Edits are shared with the crew.`));
+  // Identity / viewing context
+  if (editable) {
+    root.appendChild(el('div', 'sharednote',
+      `✏️ Editing <strong>your</strong> plan (${person().emoji} ${person().name}). Everyone builds their own — switch tabs above to see the others' latest.`));
+  } else {
+    root.appendChild(el('div', 'viewnote',
+      `👀 Viewing <strong>${person().emoji} ${person().name}'s</strong> plan (read-only)${state.updatedAt[state.person] ? ` · updated ${timeAgo(state.updatedAt[state.person])}` : ''}. Switch to <strong>${meName()}</strong> to edit yours.`));
+  }
 
   // Jing banner for the backpacking window
   if (!person().legs.includes('wilderness')) {
     root.appendChild(el('div', 'banner',
-      `🥾 <strong>Femi &amp; Cynthia are deep in the backcountry</strong> Aug 12–20. You join the crew in Anchorage on <strong>${person().arrives}</strong> — here's everything from there.`));
+      `🥾 <strong>Femi &amp; Cynthia are deep in the backcountry</strong> Aug 12–20. ${person().id === state.me ? 'You join' : person().name + ' joins'} the crew in Anchorage on <strong>${person().arrives}</strong>.`));
   }
 
   const span = person().legs.includes('wilderness') ? activeRouteSpan() : null;
@@ -264,13 +353,13 @@ function renderBoard() {
     const slot = el('div', 'slot');
     slot.dataset.date = d.date;
 
-    itemsForDay(d.date).forEach((item) => slot.appendChild(makeCard(item)));
+    itemsForDay(d.date).forEach((item) => slot.appendChild(makeCard(item, editable)));
 
     // Multi-day route continuation chip (read-only)
     if (span && span.coverDates.includes(d.date)) {
       const n = span.coverDates.indexOf(d.date) + 2; // day 2, 3, ...
       slot.appendChild(el('div', 'cont-chip', `${span.exp.emoji} ${span.exp.name} · day ${n}`));
-    } else {
+    } else if (editable) {
       const add = el('button', 'add-slot', '＋ add experience');
       add.onclick = () => openAddDrawer(d.date);
       slot.appendChild(add);
@@ -283,31 +372,34 @@ function renderBoard() {
 }
 
 function itemsForDay(date) {
-  return state.plan.items.filter((i) => {
+  return curPlan().items.filter((i) => {
     if (i.day !== date) return false;
     const e = getExp(i.id);
     return e && e.who.includes(state.person);
   });
 }
 
-function makeCard(item) {
+function makeCard(item, editable) {
   const e = getExp(item.id);
   const narrative = (e.cost.mode === 'free' && e.category === 'travel') || (e.category === 'rest' && e.cost.amount === 0);
   const card = el('div', 'card' + (narrative ? ' narrative' : ''));
   card.dataset.id = e.id;
-  // Variant cards are swap-only (removing one would strand the whole choice).
-  const actions = e.variantGroup
-    ? `<button class="icon-btn" data-act="swap" title="Swap">⇄</button>`
-    : `<button class="icon-btn" data-act="remove" title="Remove">✕</button>`;
+  // Only the plan's owner sees edit controls.
+  let actions = '';
+  if (editable) {
+    actions = e.variantGroup
+      ? `<button class="icon-btn" data-act="swap" title="Swap">⇄</button>`
+      : `<button class="icon-btn" data-act="remove" title="Remove">✕</button>`;
+  }
+  const handle = editable ? `<span class="drag-handle icon-btn" data-act="drag" title="Drag to reorder">⠿</span>` : '<span class="drag-spacer"></span>';
   card.innerHTML =
-    `<span class="drag-handle icon-btn" data-act="drag" title="Drag to reorder">⠿</span>
+    `${handle}
      <span class="c-emoji">${e.emoji}</span>
      <div class="c-body">
        <div class="c-name">${e.name}</div>
        <div class="c-meta">${[e.where, e.duration].filter(Boolean).join(' · ')}</div>
      </div>
      <div class="c-actions">${actions}</div>`;
-  // interactions
   card.addEventListener('click', (ev) => {
     const act = ev.target.closest('[data-act]')?.dataset.act;
     if (act === 'remove') { removeItem(e.id); ev.stopPropagation(); return; }
@@ -315,19 +407,21 @@ function makeCard(item) {
     if (act === 'drag') return;
     openDetail(e.id);
   });
-  attachDrag(card, e.id);
+  if (editable) attachDrag(card, e.id);
   return card;
 }
 
 function removeItem(id) {
+  if (!isEditable()) return;
   const e = getExp(id);
-  state.plan.items = state.plan.items.filter((i) => i.id !== id);
-  if (e && e.variantGroup) delete state.plan.variants[e.variantGroup];
-  savePlan(); renderBoard(); closeSheet();
+  curPlan().items = curPlan().items.filter((i) => i.id !== id);
+  if (e && e.variantGroup) delete curPlan().variants[e.variantGroup];
+  pushMyPlan(); renderBoard(); closeSheet();
 }
 
 function addItem(id, day) {
-  if (state.plan.items.some((i) => i.id === id)) return;
+  if (!isEditable()) return;
+  if (curPlan().items.some((i) => i.id === id)) return;
   const e = getExp(id);
   // Pick a valid day for this experience's leg (fall back to first eligible visible day).
   let target = day && allowedOnDay(e, day) ? day
@@ -337,18 +431,20 @@ function addItem(id, day) {
     if (!vd) return; // no valid day for this person — shouldn't happen
     target = vd.date;
   }
-  state.plan.items.push({ id, day: target });
-  savePlan(); renderBoard();
+  state.plans[state.me].items.push({ id, day: target });
+  pushMyPlan(); renderBoard();
 }
 
 function swapVariant(groupId, newId) {
+  if (!isEditable()) return;
   const g = VARIANT_GROUPS.find((x) => x.id === groupId);
-  const current = state.plan.items.find((i) => g.options.includes(i.id));
+  const p = curPlan();
+  const current = p.items.find((i) => g.options.includes(i.id));
   const day = current ? current.day : getExp(newId).defaultDay || visibleDays()[0].date;
-  state.plan.items = state.plan.items.filter((i) => !g.options.includes(i.id));
-  state.plan.items.push({ id: newId, day });
-  state.plan.variants[groupId] = newId;
-  savePlan(); renderBoard(); closeSheet();
+  p.items = p.items.filter((i) => !g.options.includes(i.id));
+  p.items.push({ id: newId, day });
+  p.variants[groupId] = newId;
+  pushMyPlan(); renderBoard(); closeSheet();
 }
 
 // ---------- drag & drop (pointer-based, works on touch + mouse) ----------
@@ -386,7 +482,7 @@ function onDragEnd(ev) {
   // Don't allow dropping onto an incompatible leg (e.g., a water activity on a backcountry day).
   if (!allowedOnDay(moved, targetDay)) { drag = null; return; }
 
-  const items = state.plan.items;
+  const items = curPlan().items;
   const from = items.findIndex((i) => i.id === drag.id);
   if (from < 0) { drag = null; return; }
   const item = items.splice(from, 1)[0];
@@ -401,7 +497,7 @@ function onDragEnd(ev) {
     items.push(item);
   }
   drag = null;
-  savePlan(); renderBoard();
+  pushMyPlan(); renderBoard();
 }
 
 // ---------- bottom sheet ----------
@@ -428,12 +524,14 @@ function costPill(e) {
 function openDetail(id) {
   const e = getExp(id);
   const hero = `<img class="sheet-hero" src="img/${e.id}.jpg" alt="${e.name}" onerror="this.style.display='none'">`;
-  const inPlan = state.plan.items.some((i) => i.id === id);
+  const inPlan = curPlan().items.some((i) => i.id === id);
   const link = e.sourceUrl ? `<a class="s-link" href="${e.sourceUrl}" target="_blank" rel="noopener">More info ↗</a>` : '';
-  let actions;
-  if (inPlan && e.variantGroup) actions = `<button class="btn sec" data-x="swap">Swap this choice</button>`;
-  else if (inPlan) actions = `<button class="btn danger" data-x="remove">Remove from plan</button>`;
-  else actions = `<button class="btn primary" data-x="add">Add to my plan</button>`;
+  let actions = '';
+  if (isEditable()) {
+    if (inPlan && e.variantGroup) actions = `<button class="btn sec" data-x="swap">Swap this choice</button>`;
+    else if (inPlan) actions = `<button class="btn danger" data-x="remove">Remove from plan</button>`;
+    else actions = `<button class="btn primary" data-x="add">Add to my plan</button>`;
+  }
   const s = openSheet(
     `${hero}
      <h3>${e.emoji} ${e.name}</h3>
@@ -451,8 +549,9 @@ function openDetail(id) {
 }
 
 function openSwap(groupId) {
+  if (!isEditable()) return;
   const g = VARIANT_GROUPS.find((x) => x.id === groupId);
-  const chosen = state.plan.variants[groupId];
+  const chosen = curPlan().variants[groupId];
   let html = `<h3>Choose your ${g.label.toLowerCase()}</h3><div class="s-meta">Pick one — swaps update your plan &amp; total.</div><div style="margin-top:14px">`;
   g.options.forEach((oid) => {
     const e = getExp(oid);
@@ -543,7 +642,7 @@ function renderPlan() {
     });
     html += `</div>`;
   });
-  html += `<div class="r-total"><span>Your share</span><span>${money(total)}</span></div>
+  html += `<div class="r-total"><span>${isEditable() ? 'Your' : person().name + '’s'} share</span><span>${money(total)}</span></div>
     <p class="r-sub" style="margin-top:10px;font-size:12px">Covers planned trip costs only (transport, lodging, activities) — not flights, food, or gear.</p></div>`;
   root.innerHTML = html;
 }
@@ -561,14 +660,12 @@ function renderMapList() {
   });
 }
 
-// ---------- share ----------
+// ---------- share (the app link — plans sync automatically) ----------
 function sharePlan() {
-  const payload = { plan: state.plan }; // share the plan only, not the sender's person lens
-  const hash = btoa(unescape(encodeURIComponent(JSON.stringify(payload))));
-  const url = location.origin + location.pathname + '#' + hash;
+  const url = location.origin + location.pathname;
   navigator.clipboard?.writeText(url).then(
-    () => toast('Link copied — send it to the crew! 🔗'),
-    () => prompt('Copy your plan link:', url)
+    () => toast('App link copied — send it to the crew! 🔗'),
+    () => prompt('Copy the app link:', url)
   );
 }
 function toast(msg) {
@@ -580,6 +677,70 @@ function toast(msg) {
   });
   document.body.appendChild(t);
   setTimeout(() => t.remove(), 2600);
+}
+
+// ---------- plain view ("Fuck you Femi, I hate technology") ----------
+function openPlain() {
+  renderPlain();
+  $('#plain').classList.remove('hidden');
+}
+function closePlain() {
+  $('#plain').classList.add('hidden');
+}
+function renderPlain() {
+  const rec = defaultPlan(); // the recommended full itinerary, all three, both legs
+  const byId = (id) => getExp(id);
+  let h = `<div class="plain-inner">
+    <button id="plain-back" class="plain-back">← back</button>
+    <h1>Alaska — the plan</h1>
+    <p class="plain-sub">${TRIP.dates} · Femi, Cynthia & Jing</p>
+    <h2>Itinerary</h2>`;
+  DAYS.forEach((d) => {
+    const items = rec.items.filter((i) => i.day === d.date);
+    h += `<div class="plain-day"><b>${dayLabel(d.date)}</b> <span class="plain-leg">${d.leg === 'wilderness' ? '· backcountry (Femi & Cynthia)' : '· water leg (all three)'}</span>`;
+    if (items.length) {
+      h += '<ul>' + items.map((i) => { const e = byId(i.id); return `<li>${e.emoji} ${e.name}${e.where ? ` — <span class="plain-muted">${e.where}</span>` : ''}</li>`; }).join('') + '</ul>';
+    } else {
+      const span = (() => { const it = rec.items.find((x) => byId(x.id)?.spanDays); if (!it) return null; const e = byId(it.id); const wild = DAYS.filter((x) => x.leg === 'wilderness').map((x) => x.date); const s = wild.indexOf(it.day); return s >= 0 && wild.slice(s + 1, s + e.spanDays).includes(d.date) ? e : null; })();
+      h += span ? `<ul><li class="plain-muted">${span.emoji} ${span.name} (continued)</li></ul>` : '<ul><li class="plain-muted">open / rest</li></ul>';
+    }
+    h += '</div>';
+  });
+
+  // All options grouped
+  h += '<h2>All options</h2><p class="plain-sub">Swap or add any of these in the app.</p>';
+  const groups = [
+    ['Wilderness routes', VARIANT_GROUPS.find((g) => g.id === 'wilderness-route').options],
+    ['Glacier cruises', VARIANT_GROUPS.find((g) => g.id === 'cruise').options],
+    ['Big activity day', VARIANT_GROUPS.find((g) => g.id === 'fifth-day').options],
+  ];
+  groups.forEach(([label, ids]) => {
+    h += `<h3>${label}</h3><ul>` + ids.map((id) => optLine(byId(id))).join('') + '</ul>';
+  });
+  const addons = EXPERIENCES.filter((e) => !e.fixed && !e.variantGroup && e.defaultDay);
+  h += `<h3>Add-ons in the plan</h3><ul>` + addons.map(optLine).join('') + '</ul>';
+  const extrasByCat = {};
+  EXTRA_ACTIVITIES.forEach((e) => { (extrasByCat[e.category] ||= []).push(e); });
+  Object.keys(extrasByCat).sort().forEach((cat) => {
+    h += `<h3>More: ${cat}</h3><ul>` + extrasByCat[cat].map(optLine).join('') + '</ul>';
+  });
+  h += `<p class="plain-sub" style="margin-top:24px">Costs are per person. Planned trip costs only — no flights, food, gas, or gear.</p></div>`;
+  $('#plain').innerHTML = h;
+  $('#plain-back').onclick = closePlain;
+}
+function optLine(e) {
+  if (!e) return '';
+  const share = perItemShareFor(e, 'femi');
+  const cost = e.cost.mode === 'free' || share === 0 ? 'free/included' : '$' + Math.round(share) + (e.cost.mode === 'shared' ? ' (split)' : '/person');
+  return `<li>${e.emoji} <b>${e.name}</b> — ${e.where || ''} · <span class="plain-muted">${cost}</span><br><span class="plain-muted">${e.blurb || ''}</span></li>`;
+}
+// Cost for a specific person (plain view is person-agnostic; use a representative payer).
+function perItemShareFor(e, pid) {
+  const { amount, mode, shares } = e.cost;
+  if (mode === 'perPerson') return amount;
+  if (mode === 'shared') { const s = PEOPLE.filter((p) => e.who.includes(p.id)).length || 1; return amount / s; }
+  if (mode === 'custom') return (shares && shares[pid]) || 0;
+  return 0;
 }
 
 boot();
