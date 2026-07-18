@@ -260,6 +260,7 @@ function updateSyncBadge(offline) {
 }
 
 function renderAll() {
+  $('#reset-plan').style.display = isEditable() ? '' : 'none'; // Reset only applies to your own plan
   renderTotal();
   renderBoard();
   if (state.view === 'stay') renderStay();
